@@ -1,0 +1,45 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  release:
+    types: 
+      - created
+
+jobs:
+  release-build:
+    name: Build Python package
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: qutech-delft/github-actions/actions/python/poetry-build@master
+        with:
+          poetry-version: '2.4.1'
+
+  pypi-publish:
+    name: Publish Python package to PyPI
+    runs-on: ubuntu-latest
+    needs: release-build
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Download Artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: release-dists
+          path: dist
+
+      - name: Publish release distribution to Test PyPI
+        if: github.ref == 'refs/heads/master'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          verbose: true
+      - name: Publish release distribution to PyPI
+        if: github.event_name == 'release' && github.event.action == 'created'
+        uses: pypa/gh-action-pypi-publish@release/v1
